@@ -1,0 +1,185 @@
+#include "rh_infotaxis/ParticleFilter.h"
+
+
+void ParticleFilter::initialization(int num_particles, EnvClass env) //constructor
+{
+    std::random_device rd;  // Will be used to obtain a seed for the random number engine
+    std::mt19937 gen(rd()); // Standard mersenne_twister_engine seeded with rd()
+    std::uniform_real_distribution<double> particle_rand(0.0, 1.0);
+
+    n_p = num_particles;
+    for(int i=0; i<n_p; i++)
+    {
+        X.push_back( particle_rand(gen)*env.nx );
+        Y.push_back( particle_rand(gen)*env.ny );
+        Z.push_back( particle_rand(gen)*env.nz );
+
+
+        X.push_back( particle_rand(gen)*env.nx );
+        Y.push_back( particle_rand(gen)*env.ny );
+        Z.push_back( particle_rand(gen)*env.nz );
+        Q.push_back( particle_rand(gen)*env.source_q );
+        Phi.push_back( particle_rand(gen)*env.source_phi );
+        D.push_back( particle_rand(gen)*env.source_d );
+        Tau.push_back( particle_rand(gen)*env.source_tau );
+
+        Wpnorm.push_back( 1.0/n_p );
+
+        exp_conc.push_back(0.0);
+    }
+
+}
+
+void ParticleFilter::isotropic_plume(UavClass uav, EnvClass env)
+{
+    double dist, y_n, lambda_plume, rate;
+
+    for(int i=0; i<n_p; i++)
+    {
+        dist = sqrt( pow(uav.x-X[i],2) + pow(uav.y-Y[i],2) + pow(uav.z-Z[i],2) ) * env.m_per_grid;
+        y_n = ( -(uav.x-X[i])*sin(Phi[i]) + (uav.y-Y[i])*cos(Phi[i]) ) * env.m_per_grid;
+        lambda_plume = sqrt( D[i]*Tau[i] / (1+pow(env.source_u,2)*Tau[i]/4/D[i]) );
+        rate = Q[i]/(4*M_PI*D[i]*dist) * exp(-y_n*env.source_u/(2*D[i]) - dist/lambda_plume);
+        exp_conc[i] = rate * env.dt * (3*3); //horizontal size = 3m X 3m, vertical size = 1m
+
+        //std::cout << exp_conc[i] << "  ";
+    }
+    //std::cout << std::endl;
+
+}
+
+void ParticleFilter::prior(EnvClass env)
+{
+    bool keep[n_p] = {0,};
+    for(int i=0; i<n_p; i++)
+    {
+        if(X[i]>=0 && X[i]<=env.nx && Y[i]>=0 && Y[i]<=env.ny && Z[i]>=0 && Z[i]<=env.nz)
+        {
+            if(Q[i]>=0.01*env.source_q && D[i]>=0 && Tau[i]>=0)
+                keep[i] = 1; // Keep true
+        }
+        if (keep[i] != 1) // if not keep
+        { Wpnorm[i] = 0; }
+    }
+}
+
+void ParticleFilter::resampling(UavClass uav, EnvClass env)
+{
+    double sum_weight[n_p] = {0,};
+    sum_weight[0] = Wpnorm[0];
+    for(int i=1; i<n_p; i++)
+    {
+        sum_weight[i] = sum_weight[i-1] + Wpnorm[i];
+        std::cout << "WP: " << Wpnorm[i] << std::endl;
+        std::cout << "SUM: " << sum_weight[i] << std::endl;
+    }
+}
+
+void ParticleFilter::weight_update(UavClass uav, EnvClass env)
+{
+    isotropic_plume(uav, env);
+
+    double pdetSig[n_p], ga_val[n_p], ga_new[n_p];
+    for(int i=0; i<n_p; i++)
+    {
+        pdetSig[i] = sqrt( pow(exp_conc[i]*uav.sensor_sig_m,2) + pow(env.env_sig,2) );
+        if(pdetSig[i] < 1e-100)
+	    pdetSig[i] = 1e-100;
+
+        ga_val[i] = (uav.sensor_value - exp_conc[i]) / pdetSig[i];
+        ga_new[i] = 1/(sqrt(2*M_PI) * pdetSig[i]) * exp(-pow(ga_val[i],2) / 2);
+        /*
+        std::cout << "-------------------------------------------" << std::endl;
+        std::cout << "Wp_origin: " << Wpnorm[i] << std::endl;
+        std::cout << "Exp_conc: " << exp_conc[i] << std::endl;
+        std::cout << "likelihood: " << ga_new[i] << std::endl;
+        */
+
+        Wpnorm[i] = Wpnorm[i]*ga_new[i];
+
+        /*
+        std::cout << "Wp_new: " << Wpnorm[i] << std::endl;
+        */
+    }
+
+    prior(env); // make zero weight what locates outside of domain
+
+    double Wp_sum = 0, Neff_inv = 0;
+    for(int i=0; i<n_p; i++)
+    {
+        Wp_sum += Wpnorm[i];
+    }
+    for(int i=0; i<n_p; i++)
+    {
+        Wpnorm[i] = Wpnorm[i]/Wp_sum;
+        Neff_inv += pow(Wpnorm[i],2);
+        /*
+        std::cout << "Wp_new: " << Wpnorm[i] << std::endl;
+        std::cout << Wp_sum << std::endl;
+        std::cout << Neff_inv << std::endl;
+        */
+    }
+    /*
+    std::cout << 1.0/Neff_inv << std::endl;
+    std::cout << 0.5*n_p << std::endl;
+    */
+
+    if(1.0/Neff_inv < 1.0*n_p)
+    {
+        resampling(uav, env);
+    }
+    /*
+    std::cout << "X: ";
+    for(int i=0; i<n_p; i++)
+    {
+        std::cout <<X[i] << "; ";
+    }
+    std::cout << std::endl;
+    std::cout << "Y: ";
+    for(int i=0; i<n_p; i++)
+    {
+        std::cout <<Y[i] << "; ";
+    }
+    std::cout << std::endl;
+    std::cout << "Z: ";
+    for(int i=0; i<n_p; i++)
+    {
+        std::cout <<Z[i] << "; ";
+    }
+    std::cout << std::endl;
+    std::cout << "Q: ";
+    for(int i=0; i<n_p; i++)
+    {
+        std::cout <<Q[i] << "; ";
+    }
+    std::cout << std::endl;
+    std::cout << "Phi: ";
+    for(int i=0; i<n_p; i++)
+    {
+        std::cout <<Phi[i] << "; ";
+    }
+    std::cout << std::endl;
+    std::cout << "D: ";
+    for(int i=0; i<n_p; i++)
+    {
+        std::cout <<D[i] << "; ";
+    }
+    std::cout << std::endl;
+    std::cout << "Tau: ";
+    for(int i=0; i<n_p; i++)
+    {
+        std::cout <<Tau[i] << "; ";
+    }
+    std::cout << std::endl;
+    std::cout << "Exp_conc: ";
+    for(int i=0; i<n_p; i++)
+    {
+        std::cout <<exp_conc[i] << "; ";
+    }
+    std::cout << std::endl;
+    */
+
+
+
+}
+

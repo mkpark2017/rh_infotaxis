@@ -1,0 +1,297 @@
+#include "rh_infotaxis/ParticleFilter.h"
+
+
+void ParticleFilter::initialization(int num_particles, EnvClass env) //constructor
+{
+    std::random_device rd;  // Will be used to obtain a seed for the random number engine
+    std::mt19937 gen(rd()); // Standard mersenne_twister_engine seeded with rd()
+    std::uniform_real_distribution<double> rand_data(0.0, 1.0);
+
+    n_p = num_particles;
+    for(int i=0; i<n_p; i++)
+    {
+        
+        X.push_back( rand_data(gen)*env.nx );
+        Y.push_back( rand_data(gen)*env.ny );
+        Z.push_back( rand_data(gen)*env.nz );
+        
+        Q.push_back( rand_data(gen)*env.source_q );
+        Phi.push_back( rand_data(gen)*env.source_phi );
+        D.push_back( rand_data(gen)*env.source_d );
+        Tau.push_back( rand_data(gen)*env.source_tau );
+
+        Wpnorm.push_back( 1.0/n_p );
+
+        ga_new.push_back(0.0);
+
+    }
+
+}
+
+vector<double> ParticleFilter::isotropic_plume(UavClass uav, vector<double> pf_samples)
+{
+    vector<double> conc;
+    vector<double> pf_x(pf_samples.begin(),       pf_samples.begin()+n_p),
+                   pf_y(pf_samples.begin()+n_p,   pf_samples.begin()+n_p*2),
+                   pf_z(pf_samples.begin()+n_p*2, pf_samples.begin()+n_p*3),
+                   pf_q(pf_samples.begin()+n_p*3, pf_samples.begin()+n_p*4),
+                   pf_p(pf_samples.begin()+n_p*4, pf_samples.begin()+n_p*5),
+                   pf_d(pf_samples.begin()+n_p*5, pf_samples.begin()+n_p*6),
+                   pf_t(pf_samples.begin()+n_p*6, pf_samples.end());
+
+    double del_x_sq, del_y_sq, del_z_sq, dist, y_n, lambda_plume, rate;
+
+    for(int i=0; i<n_p; i++)
+    {
+        del_x_sq = pow(uav_pose[0] - pf_x[i], 2);
+        del_y_sq = pow(uav_pose[1] - pf_y[i], 2);
+        del_z_sq = pow(uav_pose[2] - pf_z[i], 2)
+        dist = sqrt( pow(uav_pose[0]-pf_x[i],2) + pow(uav_pose[1]-pf_y[i],2) + pow(uav_pose[2]-pf_z[i],2) ) * env.m_per_grid;
+        y_n = ( -(uav.x-X[i])*sin(Phi[i]) + (uav.y-Y[i])*cos(Phi[i]) ) * env.m_per_grid;
+        lambda_plume = sqrt( D[i]*Tau[i] / (1+pow(env.source_u,2)*Tau[i]/4/D[i]) );
+        rate = Q[i]/(4*M_PI*D[i]*dist) * exp(-y_n*env.source_u/(2*D[i]) - dist/lambda_plume);
+        conc.push_back(rate * env.dt * (3*3) ); //horizontal size = 3m X 3m, vertical size = 1m
+
+        //std::cout << exp_conc[i] << "  ";
+    }
+    //std::cout << std::endl;
+    return conc
+}
+
+void ParticleFilter::prior(EnvClass env)
+{
+    bool keep[n_p] = {0,};
+    for(int i=0; i<n_p; i++)
+    {
+        if(X[i]>=0 && X[i]<=env.nx && Y[i]>=0 && Y[i]<=env.ny && Z[i]>=0 && Z[i]<=env.nz)
+        {
+            if(Q[i]>=0.01*env.source_q && D[i]>=0 && Tau[i]>=0)
+                keep[i] = 1; // Keep true
+        }
+        if (keep[i] != 1) // if not keep
+        { Wpnorm[i] = 0; }
+    }
+}
+
+void ParticleFilter::resampling(UavClass uav, EnvClass env)
+{
+    std::random_device rd;  // Will be used to obtain a seed for the random number engine
+    std::mt19937 gen(rd()); // Standard mersenne_twister_engine seeded with rd()
+    std::uniform_real_distribution<double> rand_data(0.0, 1.0);
+
+
+    double sum_weight[n_p] = {0,}, random_select[n_p];
+    sum_weight[0] = Wpnorm[0];
+    random_select[0] = rand_data(gen)/n_p;
+    for(int i=1; i<n_p; i++)
+    {
+        sum_weight[i] = sum_weight[i-1] + Wpnorm[i];
+        random_select[i] = double(i)/n_p + rand_data(gen)/n_p;
+        //std::cout << "WP: " << Wpnorm[i] << std::endl;
+        //std::cout << "SUM: " << sum_weight[i] << std::endl;
+        std::cout << random_select[i] << std::endl;
+    }
+    int j =0;
+    vector<int> indx;
+    for(int i=0; i<n_p; i++)
+    {
+        while(sum_weight[j] < random_select[i])
+        {
+            j += 1;
+        }
+        indx.push_back(j);
+
+        std::cout << "indx: " << indx[i] << std::endl;
+    }
+
+    //----------------------------------MCMC------------------------------------
+    double mm=5.0;
+    double A=pow(4.0/(mm+2.0), 1.0/(mm+4.0) );
+    double hopt = A* pow(n_p, -1.0/(mm+4.0) );
+
+    for(int i=0; i<n_p; i++)
+    {
+        X[i] = X[indx[i]];
+        Y[i] = Y[indx[i]];
+        Z[i] = Z[indx[i]];
+
+        Q[i]   = Q[indx[i]];
+        Phi[i] = Phi[indx[i]];
+        D[i]   = D[indx[i]];
+        Tau[i] = Tau[indx[i]];
+    }
+
+    vector<int> indx_unique;
+    indx_unique = indx;
+    indx_unique.erase(unique(indx_unique.begin(), indx_unique.end() ), indx_unique.end() );
+
+    double num_while_iter = 1.0;
+    double dkX, dkY, dkZ, dkQ, dkPhi, dkD, dkTau;
+    double nX[n_p], nY[n_p], nZ[n_p], nQ[n_p], nPhi[n_p], nD[n_p], nTau[n_p];
+
+
+    /*
+    while(indx_unique.size() < n_p*0.5)
+    {
+        //------------------------------------------STD-----------------------------------------
+        dkX = sqrt( (X*X).sum()/X.size() - pow(X.sum()/X.size(),2) )/num_while_iter + 0.5;
+        dkY = sqrt( (Y*Y).sum()/Y.size() - pow(Y.sum()/Y.size(),2) )/num_while_iter + 0.5;
+        dkZ = sqrt( (Z*Z).sum()/Z.size() - pow(Z.sum()/Z.size(),2) )/num_while_iter + 0.5;
+
+        dkQ   = sqrt( (Q*Q).sum()/Q.size() - pow(Q.sum()/Q.size(),2) )/num_while_iter + 0.5;
+        dkPhi = sqrt( (Phi*Phi).sum()/Phi.size()-pow(Phi.sum()/Phi.size(),2) )/num_while_iter+0.5;
+        dkD   = sqrt( (D*D).sum()/D.size() - pow(D.sum()/D.size(),2) )/num_while_iter + 0.5;
+        dkTau = sqrt( (Tau*Tau).sum()/Tau.size()-pow(Tau.sum()/Tau.size(),2) )/num_while_iter+0.5;
+
+        for(int i=0; i<n_p; i++)
+        {
+            nX[i] = X[i] + hopt * dkX * rand_data(gen);
+            nY[i] = Y[i] + hopt * dkY * rand_data(gen);
+            nZ[i] = Z[i] + hopt * dkZ * rand_data(gen);
+
+            nQ[i]   = Q[i]   + hopt * dkQ   * rand_data(gen);
+            nPhi[i] = Phi[i] + hopt * dkPhi * rand_data(gen);
+            nD[i]   = D[i]   + hopt * dkD   * rand_data(gen);
+            nTau[i] = Tau[i] + hopt * dkTau * rand_data(gen);
+        }
+        isotropic_plume(uav, env);
+
+        double ndetSig[n_p], na_val[n_p] na_new[n_p];
+        for(int i=0; i<n_p; i++)
+        {
+            ndetSig[i] = sqrt( pow(exp_conc[i]*uav.sensor_sig_m,2) + pow(env.env_sig,2) );
+            if(ndetSig[i] < 1e-100)
+                ndetSig[i] = 1e-100;
+
+            na_val[i] = (uav.sensor_value - exp_conc[i]) / ndetSig[i];
+            na_new[i] = 1/(sqrt(2*M_PI) * ndetSig[i]) * exp(-pow(na_val[i],2) / 2);
+        }
+        prior(env);
+    }
+    */
+}
+
+void ParticleFilter::weight_update(UavClass uav, EnvClass env)
+{
+    vector<double> uav_pose = {uav.x, uav.y, uav.z};
+
+    //----------------------------make single vecotr-----------------------------------
+    vector<double> pf_samples = X;
+    pf_samples.insert(pf_samples.end(), Y.begin(), Y.end());
+    pf_samples.insert(pf_samples.end(), Z.begin(), Z.end());
+
+    pf_samples.insert(pf_samples.end(), Q.begin(),   Q.end());
+    pf_samples.insert(pf_samples.end(), Phi.begin(), Phi.end());
+    pf_samples.insert(pf_samples.end(), D.begin(),   D.end());
+    pf_samples.insert(pf_samples.end(), Tau.begin(), Tau.end());
+
+
+    vector<double> conc;
+    conc = isotropic_plume(uav_pose, pf_samples);
+
+
+    double pdetSig[n_p], ga_val[n_p];
+    for(int i=0; i<n_p; i++)
+    {
+        pdetSig[i] = sqrt( pow(exp_conc[i]*uav.sensor_sig_m,2) + pow(env.env_sig,2) );
+        if(pdetSig[i] < 1e-100)
+	    pdetSig[i] = 1e-100;
+
+        ga_val[i] = (uav.sensor_value - exp_conc[i]) / pdetSig[i];
+        ga_new[i] = 1/(sqrt(2*M_PI) * pdetSig[i]) * exp(-pow(ga_val[i],2) / 2);
+        
+        std::cout << "-------------------------------------------" << std::endl;
+        std::cout << "Wp_origin: " << Wpnorm[i] << std::endl;
+        std::cout << "Exp_conc: " << exp_conc[i] << std::endl;
+        std::cout << "likelihood: " << ga_new[i] << std::endl;
+        
+        Wpnorm[i] = Wpnorm[i]*ga_new[i];
+
+        /*
+        std::cout << "Wp_new: " << Wpnorm[i] << std::endl;
+        */
+    }
+
+    prior(env); // make zero weight what locates outside of domain
+
+    double Wp_sum = 0, Neff_inv = 0;
+    for(int i=0; i<n_p; i++)
+    {
+        Wp_sum += Wpnorm[i];
+    }
+    for(int i=0; i<n_p; i++)
+    {
+        Wpnorm[i] = Wpnorm[i]/Wp_sum;
+        std::cout << "Wp_new: " << Wpnorm[i] << std::endl;
+
+        Neff_inv += pow(Wpnorm[i],2);
+        /*
+        std::cout << "Wp_new: " << Wpnorm[i] << std::endl;
+        std::cout << Wp_sum << std::endl;
+        std::cout << Neff_inv << std::endl;
+        */
+    }
+    /*
+    std::cout << 1.0/Neff_inv << std::endl;
+    std::cout << 0.5*n_p << std::endl;
+    */
+
+    if(1.0/Neff_inv < 1.0*n_p)
+    {
+        resampling(uav, env);
+    }
+    /*
+    std::cout << "X: ";
+    for(int i=0; i<n_p; i++)
+    {
+        std::cout <<X[i] << "; ";
+    }
+    std::cout << std::endl;
+    std::cout << "Y: ";
+    for(int i=0; i<n_p; i++)
+    {
+        std::cout <<Y[i] << "; ";
+    }
+    std::cout << std::endl;
+    std::cout << "Z: ";
+    for(int i=0; i<n_p; i++)
+    {
+        std::cout <<Z[i] << "; ";
+    }
+    std::cout << std::endl;
+    std::cout << "Q: ";
+    for(int i=0; i<n_p; i++)
+    {
+        std::cout <<Q[i] << "; ";
+    }
+    std::cout << std::endl;
+    std::cout << "Phi: ";
+    for(int i=0; i<n_p; i++)
+    {
+        std::cout <<Phi[i] << "; ";
+    }
+    std::cout << std::endl;
+    std::cout << "D: ";
+    for(int i=0; i<n_p; i++)
+    {
+        std::cout <<D[i] << "; ";
+    }
+    std::cout << std::endl;
+    std::cout << "Tau: ";
+    for(int i=0; i<n_p; i++)
+    {
+        std::cout <<Tau[i] << "; ";
+    }
+    std::cout << std::endl;
+    std::cout << "Exp_conc: ";
+    for(int i=0; i<n_p; i++)
+    {
+        std::cout <<exp_conc[i] << "; ";
+    }
+    std::cout << std::endl;
+    */
+
+
+
+}
+
