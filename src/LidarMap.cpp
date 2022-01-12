@@ -43,7 +43,7 @@ void LidarMap::callback(const sensor_msgs::LaserScan::ConstPtr& msg)
         int map_ny = grid_map[0].size();
         //cout<< "lidar_num" << laser_num << endl;
 
-        cout << "laser_num: " << msg->ranges.size() << endl;
+        //cout << "laser_num: " << msg->ranges.size() << endl;
         for(int i=0; i<laser_num; i++)
         {
             ranges[i] = (msg->ranges[i])/resolution; //do i have to round it?

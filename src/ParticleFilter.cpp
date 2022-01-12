@@ -18,7 +18,8 @@ void ParticleFilter::initialization(int num_particles, EnvClass env) //construct
         Z.push_back( rand_data(gen)*pf_env.nz );
         
         Q.push_back( rand_data(gen)*pf_env.source_q );
-        Phi.push_back( rand_data(gen)*pf_env.source_phi );
+        //Phi.push_back( rand_data(gen)*pf_env.source_phi );
+        Phi.push_back( pf_env.source_phi );
         D.push_back( rand_data(gen)*pf_env.source_d );
         Tau.push_back( rand_data(gen)*pf_env.source_tau );
 
@@ -162,13 +163,13 @@ void ParticleFilter::resampling(UavClass uav, vector<double> Likelihood, int8_t 
         }
         else
         {
-            std::cout << sum_weight[i*(n_p/num_sector)-1] << std::endl;
+            //std::cout << sum_weight[i*(n_p/num_sector)-1] << std::endl;
             for(int j=0; j<(n_p/num_sector); j++)
                 sum_weight.push_back(sum_weight[i*(n_p/num_sector)-1] + sum_weight_temp[j]);
         }
     }
 
-    std::cout << "sum_weight: " << sum_weight[n_p-1] << std::endl;
+    //std::cout << "sum_weight: " << sum_weight[n_p-1] << std::endl;
 
 
     for(int i=1; i<n_p; i++)
@@ -323,7 +324,7 @@ void ParticleFilter::weight_update(UavClass uav, int8_t sen_model, double sen_va
 
         Neff_inv += pow(Wpnorm[i],2);
     }
-    std::cout << "Neff :" << 1.0/Neff_inv << std::endl;
+    //std::cout << "Neff :" << 1.0/Neff_inv << std::endl;
 
     if(1.0/Neff_inv < 0.5*n_p && resamp_on)
     {

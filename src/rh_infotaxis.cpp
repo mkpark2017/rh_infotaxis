@@ -139,6 +139,9 @@ int main(int argc, char **argv)
 
     vector<int8_t> current_map;
 
+    int iteration = 0;
+    double time_sum = 0;
+
     while(ros::ok())
     {
         double del_x_sq = pow(next_goal.x-current_uav.x,2);
@@ -170,17 +173,17 @@ int main(int argc, char **argv)
                 sensing_iter    += 1;
                 //cout << "sensing_done" << endl;
             }
-            else //end sensing time = sen_srv.response.success = false
+            else
             {
                 //cout << "sensing duration: " << sensing_duration.count() << endl;
                 //cout << "sensing num: " << sensing_iter << endl;
                 sensing_uav.x            = sensing_pose[0]/sensing_iter; // taking average
                 sensing_uav.y            = sensing_pose[1]/sensing_iter;
                 sensing_uav.z            = sensing_pose[2]/sensing_iter;
-                cout << "Current sensing location: [";
-                cout << sensing_uav.x << ", ";
-                cout << sensing_uav.y << ", ";
-                cout << sensing_uav.z << "]" << endl;
+                //cout << "Current sensing location: [";
+                //cout << sensing_uav.x << ", ";
+                //cout << sensing_uav.y << ", ";
+                //cout << sensing_uav.z << "]" << endl;
 
                 geometry_msgs::PoseStamped new_location;
                 new_location.pose.position.x = sensing_uav.x;
@@ -212,16 +215,19 @@ int main(int argc, char **argv)
                     next_goal_pub.publish(next_goal_msg);
                     map_rate.sleep();
                 }
-cout << "Map Updated" << endl;
+//cout << "Map Updated" << endl;
                 lidar_map.trigger = false;
                 
                 //------------decision making (new goal)---------------
                 
+                auto process_start = high_resolution_clock::now();
                 DecisionMaker decision(env, lidar_map, total_rh); 
                 int current_rh = 1;
-cout << "Start Decision" << endl;
-                decision.RHI_BR(sensing_uav, pf, current_rh);
-cout << "Done Decision" << endl;
+//cout << "Start Decision" << endl;
+                for(int i=0; i<2; i++)
+                    decision.RHI_BR(sensing_uav, pf, current_rh);
+
+//cout << "Done Decision" << endl;
                 //next_goal = decision.new_goal;
                 /*
 		cout << "num rh decision at main: " << decision.rh_decision.size() << endl;
@@ -298,6 +304,16 @@ cout << "Done Decision" << endl;
 
                 //------------------initialize------------------
                 sensing_conc = -1.0;
+
+                iteration += 1;
+                cout << "Iteration: " << iteration << endl;
+
+                auto process_done = high_resolution_clock::now();
+                duration<double> process_duration = process_done - process_start;
+                time_sum += process_duration.count();
+                double time_avg = time_sum/iteration;
+
+                cout << "Processing average time: " << time_avg << endl;
             } // finish sensing + pf update + decision making
 
         } // goal reached
@@ -337,6 +353,8 @@ cout << "Done Decision" << endl;
                 cout << "SUCCESS" << endl;
             else
                 cout << "FAILED" << endl;
+
+            ros::shutdown();
             //initialization
         }
         ros::spinOnce();
