@@ -227,6 +227,16 @@ int main(int argc, char **argv)
                 for(int i=0; i<2; i++)
                     decision.RHI_BR(sensing_uav, pf, current_rh);
 
+                iteration += 1;
+                cout << "Iteration: " << iteration << endl;
+
+                auto process_done = high_resolution_clock::now();
+                duration<double> process_duration = process_done - process_start;
+                time_sum += process_duration.count();
+                double time_avg = time_sum/iteration;
+
+                cout << "Processing average time: " << time_avg << endl;
+
 //cout << "Done Decision" << endl;
                 //next_goal = decision.new_goal;
                 /*
@@ -305,6 +315,7 @@ int main(int argc, char **argv)
                 //------------------initialize------------------
                 sensing_conc = -1.0;
 
+/*
                 iteration += 1;
                 cout << "Iteration: " << iteration << endl;
 
@@ -314,6 +325,7 @@ int main(int argc, char **argv)
                 double time_avg = time_sum/iteration;
 
                 cout << "Processing average time: " << time_avg << endl;
+*/
             } // finish sensing + pf update + decision making
 
         } // goal reached

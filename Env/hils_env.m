@@ -2,9 +2,9 @@ close all
 clear all
 clc
 
-rosinit('http://192.168.0.113:11311');
-
+%rosinit('http://192.168.0.113:11311');
 %rosinit('http://192.168.35.51:11311');
+rosinit('http://10.42.0.120:11311');
 
 addpath('Functions')
 load('transient_data_3d_one_hour_CO_gas_11th_map_new.mat')
@@ -23,7 +23,7 @@ map_msg.Info.Width = nx;
 map_msg.Info.Height = ny;
 
 
-gas_sen_service_server = rossvcserver('/gas_sen_svc', 'mavros_msgs/ParamPull', @sensorMeasureCallback);
+%gas_sen_service_server = rossvcserver('/gas_sen_svc', 'mavros_msgs/ParamPull', @sensorMeasureCallback);
 %current_pose = [6 15 12];
 [current_pose_pub, current_pose_msg] = rospublisher('/mavros/local_position/pose', 'geometry_msgs/PoseStamped');
 current_pose_msg.Pose.Position.X = 0;
