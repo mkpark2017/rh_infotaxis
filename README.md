@@ -13,7 +13,7 @@ $ source ~/.bashrc
 
 ### 2. Run node
 ```
-$ rosrun rh_infotaxis rh_infotaxis_node
+$ roslaunch rh_infotaxis rh_infotaxis.launch
 ```
 
 ### 3. Run matlab HILS_ENV
