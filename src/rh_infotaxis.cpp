@@ -160,7 +160,6 @@ int main(int argc, char **argv)
                 sensing_conc = 0.0;
                 sensing_iter = 0;
                 sensing_start = high_resolution_clock::now();
-                //cout << "-------------------------------------------------" << endl;
             }
             sensing_now = high_resolution_clock::now();
             sensing_duration = sensing_now - sensing_start;
