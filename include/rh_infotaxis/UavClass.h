@@ -1,7 +1,6 @@
 #ifndef UAV_CLASS_H_
 #define UAV_CLASS_H_
 
-//some generically useful stuff to include...
 #include <vector>
 #include <cmath>
 
@@ -33,12 +32,6 @@ public:
     void initialization(double sen_param[]);
     void bi_thre_update();
 
-    //void state_update(double pose[], double conc);
-
-private:
-    //void sensor_model();
-    //void dispersion_model();
-    //void resampling();
 };
 
 #endif

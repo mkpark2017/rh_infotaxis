@@ -30,3 +30,4 @@ void UavClass::initialization(double sen_param[])
     ynew[4] = 0,           ynew[5] = 0,          ynew[6] = 0;
     znew[4] = -1.0*move_v, znew[5] = 1.0*move_v, znew[6] = 0;
 }
+

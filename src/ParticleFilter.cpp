@@ -157,8 +157,12 @@ void ParticleFilter::resampling(UavClass uav, vector<double> Likelihood, int8_t 
         }
     }
 
+
     for(int i=1; i<n_p; i++)
+    {
         random_select[i] = double(i)/n_p + rand_data(gen)/n_p;
+    }
+
 
     int j =0;
     std::vector<int> indx;
@@ -221,6 +225,7 @@ void ParticleFilter::resampling(UavClass uav, vector<double> Likelihood, int8_t 
         oX[i] = X[i];
         oY[i] = Y[i];
         oZ[i] = Z[i];
+
         oQ[i]   = Q[i];
         oPhi[i] = Phi[i];
         oD[i]   = D[i];
@@ -229,12 +234,12 @@ void ParticleFilter::resampling(UavClass uav, vector<double> Likelihood, int8_t 
         X[i] = oX[i] + hopt * dkX * rand_data(gen);
         Y[i] = oY[i] + hopt * dkY * rand_data(gen);
         Z[i] = oZ[i] + hopt * dkZ * rand_data(gen);
+
         Q[i]   = oQ[i]   + hopt * dkQ   * rand_data(gen);
         Phi[i] = oPhi[i] + hopt * dkPhi * rand_data(gen);
         D[i]   = oD[i]   + hopt * dkD   * rand_data(gen);
         Tau[i] = oTau[i] + hopt * dkTau * rand_data(gen);
     }
-
     vector<double> Likelihood_new;
     if(sen_model == 1) //gaussian
         Likelihood_new = gaussian_sensor_model(uav, sen_val);
@@ -244,23 +249,24 @@ void ParticleFilter::resampling(UavClass uav, vector<double> Likelihood, int8_t 
         std::cout << "WARNING: Undefined sensor model!!!!!!!!!!!" << std::endl;
 
     Likelihood_new = prior(Likelihood_new);
-
     bool keep[n_p] = {0,};
     vector<double> check_unique;
     for(int i=0; i<n_p; i++) // keep old samples
     {
         if(Likelihood[indx[i]]==0)
             int flag = getchar();
+        //if new likelihood is not enough higer than old one
         else if( Likelihood_new[i]/Likelihood[indx[i]] < rand_data(gen) )
         {
             X[i] = oX[i];
             Y[i] = oY[i];
             Z[i] = oZ[i];
+
             Q[i]   = oQ[i];
             Phi[i] = oPhi[i];
             D[i]   = oD[i];
             Tau[i] = oTau[i];
-	}
+        }
     }
 }
 

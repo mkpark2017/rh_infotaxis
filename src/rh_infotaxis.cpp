@@ -160,6 +160,7 @@ int main(int argc, char **argv)
                 sensing_conc = 0.0;
                 sensing_iter = 0;
                 sensing_start = high_resolution_clock::now();
+
             }
             sensing_now = high_resolution_clock::now();
             sensing_duration = sensing_now - sensing_start;
@@ -207,6 +208,7 @@ int main(int argc, char **argv)
                     next_goal_pub.publish(next_goal_msg);
                     map_rate.sleep();
                 }
+
                 lidar_map.trigger = false;
                 
                 //------------decision making (new goal)---------------
@@ -216,8 +218,10 @@ int main(int argc, char **argv)
                 int current_rh = 1;
 
                 vector<double> wp_temp = pf.Wpnorm;
+
                 for(int i=0; i<2; i++)
                     decision.RHI_BR(sensing_uav, pf, current_rh);
+
 
                 iteration += 1;
                 cout << "Iteration: " << iteration << endl;
@@ -228,6 +232,7 @@ int main(int argc, char **argv)
                 double time_avg = time_sum/iteration;
 
                 cout << "Processing average time: " << time_avg << endl;
+
 
                 pcl::PointCloud<pcl::PointXYZRGB> next_goal_list_XYZRGB;
                 pcl::PCLPointCloud2 next_goal_obj;
@@ -267,11 +272,13 @@ int main(int argc, char **argv)
                 pf_msg.header.frame_id = "map";
                 pf_pub.publish(pf_msg);
 
+
+
                 next_goal.x = sensing_uav.x + sensing_uav.xnew[decision.max_decision[0]];
                 next_goal.y = sensing_uav.y + sensing_uav.ynew[decision.max_decision[0]];
                 next_goal.z = sensing_uav.z + sensing_uav.znew[decision.max_decision[0]];
 
-		decision.max_entropy = -10000.0;
+                decision.max_entropy = -10000.0;
                 next_goal_msg.pose.position.x = next_goal.x;
                 next_goal_msg.pose.position.y = next_goal.y;
                 next_goal_msg.pose.position.z = next_goal.z;
@@ -279,7 +286,10 @@ int main(int argc, char **argv)
 
                 //------------------initialize------------------
                 sensing_conc = -1.0;
+
+
             } // finish sensing + pf update + decision making
+
         } // goal reached
 
         //-----------------------always publish target pose------------------------
@@ -295,10 +305,13 @@ int main(int argc, char **argv)
                     current_map.push_back(lidar_map.grid_map[i][j]);
                 }
             }
+
             lidar_map.updated = false;
         }
+
         map_2d_msg.data = current_map;
         map_2d_pub.publish(map_2d_msg);
+
 
         double x_std = pf.vector_std(pf.X);
         double y_std = pf.vector_std(pf.Y);
@@ -325,7 +338,10 @@ int main(int argc, char **argv)
         }
 
         ros::spinOnce();
+
         loop_rate.sleep();
     }
     return 0;
 }
+
+

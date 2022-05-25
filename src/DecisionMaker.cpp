@@ -56,7 +56,9 @@ bool DecisionMaker::check_building_block(UavClass uav, UavClass current)
             for(int l=min_y; l<=max_y; l++)
             {
                 if(agent_map.grid_map[l][k] == 100)
+                {
                     building_block = true;
+                }
             }
         }
     }
@@ -122,11 +124,13 @@ void DecisionMaker::RHI_BR(UavClass uav, ParticleFilter pf, int current_rh, vect
                 double new_entropy = 0;
                 for(int sen_val=0; sen_val<=1; sen_val++)
                 {
+
                     Wp_sum[sen_val] = Wp_sum[sen_val]/Wp_sum_sum;
                     future_entropy[sen_val] = Wp_sum[sen_val] * future_entropy[sen_val];
                     new_entropy += future_entropy[sen_val];
                 }
                 double entropy = current_entropy - new_entropy;
+
                 ind_1d_temp.push_back(i);
                 entropy_1d_temp.push_back(entropy);
                 RHI_BR(current, pf, current_rh+1, ind_1d_temp, entropy_1d_temp);
@@ -137,16 +141,20 @@ void DecisionMaker::RHI_BR(UavClass uav, ParticleFilter pf, int current_rh, vect
     {
         rh_decision.push_back(ind_1d);
         double entropy_sum = 0;
+
         for(int i=0; i<entropy_1d.size(); i++)
         {
             entropy_sum += pow(0.9,i)*entropy_1d[i];
         }
+
         rh_entropy.push_back(entropy_sum);
         if(max_entropy < entropy_sum)
         {
             max_decision = ind_1d;
             max_entropy = entropy_sum;
         }
+
     }
+
 }
 
