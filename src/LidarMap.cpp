@@ -41,9 +41,7 @@ void LidarMap::callback(const sensor_msgs::LaserScan::ConstPtr& msg)
 
         int map_nx = grid_map.size();
         int map_ny = grid_map[0].size();
-        //cout<< "lidar_num" << laser_num << endl;
 
-        //cout << "laser_num: " << msg->ranges.size() << endl;
         for(int i=0; i<laser_num; i++)
         {
             ranges[i] = (msg->ranges[i])/resolution; //do i have to round it?
@@ -61,26 +59,12 @@ void LidarMap::callback(const sensor_msgs::LaserScan::ConstPtr& msg)
 
                 if(j==(int)ranges[i])
                 {
-                    //cout << "hitted: " << ranges[i]*resolution << " max: " << r_max << endl;
                     if(ranges[i]*resolution < r_max)
                     {
-/*
-                        for (int a=-1; a<=1; a++)
-                        {
-                            for(int b=-1; b<=1; b++)
-                            {
-                                int new_x = grid_x+a;
-                                int new_y = grid_y+b;
-                                if(new_y>=0 && new_y< map_ny && new_x>=0 && new_x< map_nx)
-                                    grid_map[new_y][new_x] = 100;
-                            }
-                        }
-*/
                         if(grid_y>=0 && grid_y< map_ny && grid_x>=0 && grid_x< map_nx)
                             grid_map[grid_y][grid_x] = 100;
                     }
                 }
-                //cout<< i << "  cos(angle): " << cos(laser_angle) << endl;
             }
 
         }
@@ -92,7 +76,6 @@ void LidarMap::callback(const sensor_msgs::LaserScan::ConstPtr& msg)
         if(msg->ranges.size() > 0)
         {
             grid_map[uav_y][uav_x] = 100;
-            //grid_map[300][300] = -1;
         }
         else
             grid_map[uav_y][uav_x] = 0;
