@@ -169,8 +169,6 @@ void ParticleFilter::resampling(UavClass uav, vector<double> Likelihood, int8_t 
             j += 1;
         }
         indx.push_back(j);
-
-        //std::cout << "indx: " << indx[i] << std::endl;
     }
 
     //----------------------------------MCMC------------------------------------
