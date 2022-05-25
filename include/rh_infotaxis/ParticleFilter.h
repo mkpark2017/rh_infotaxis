@@ -1,7 +1,6 @@
 #ifndef PARTICLE_FILTER_H_
 #define PARTICLE_FILTER_H_
 
-//some generically useful stuff to include...
 #include <vector>
 #include <cmath>  // M_PI, erfc
 #include <random>
@@ -46,9 +45,6 @@ private:
     vector<double> binary_sensor_model(UavClass uav, double sen_val);
 
     EnvClass pf_env;
-    //void sensor_model();
-    //void dispersion_model();
-    //void resampling();
 };
 
 #endif
