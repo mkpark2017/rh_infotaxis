@@ -56,11 +56,7 @@ bool DecisionMaker::check_building_block(UavClass uav, UavClass current)
             for(int l=min_y; l<=max_y; l++)
             {
                 if(agent_map.grid_map[l][k] == 100)
-                {
                     building_block = true;
-                    //cout << "x: " << l << " y: " << k << endl;
-
-                }
             }
         }
     }
