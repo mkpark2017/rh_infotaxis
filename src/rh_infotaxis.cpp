@@ -173,8 +173,10 @@ int main(int argc, char **argv)
                 sensing_pose[0] += current_uav.x;
                 sensing_pose[1] += current_uav.y;
                 sensing_pose[2] += current_uav.z;
-                sensing_conc    += current_uav.sensor_value; //string to double
+                sensing_conc    += current_uav.sensor_value;
                 sensing_iter    += 1;
+                //cout << "current_uav.sensor_value: " << current_uav.sensor_value << endl;
+                //cout << "sensing_iter: " << sensing_iter << endl;
                 //cout << "sensing_done" << endl;
             }
             else

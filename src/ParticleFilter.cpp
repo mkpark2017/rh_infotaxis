@@ -1,13 +1,18 @@
 #include "rh_infotaxis/ParticleFilter.h"
 
+using namespace std;
 
 void ParticleFilter::initialization(int num_particles, EnvClass env) //constructor
 {
     pf_env = env;
+    default_random_engine gen(49381);
+    uniform_real_distribution<double> rand_data(0.0, 1.0);
 
-    std::random_device rd;  // Will be used to obtain a seed for the random number engine
-    std::mt19937 gen(172); // Standard mersenne_twister_engine seeded with rd()
-    std::uniform_real_distribution<double> rand_data(0.0, 1.0);
+
+
+    //std::random_device rd;  // Will be used to obtain a seed for the random number engine
+    //std::mt19937 gen(172); // gen(rd()) Standard mersenne_twister_engine seeded with rd()
+    //std::uniform_real_distribution<double> rand_data(0.0, 1.0);
 
     n_p = num_particles;
     for(int i=0; i<n_p; i++)
@@ -91,7 +96,7 @@ vector<double> ParticleFilter::gaussian_sensor_model(UavClass uav, double sen_va
 
     for(int i=0; i<n_p; i++)
     {
-        pdetSig[i] = sqrt( pow(exp_conc[i]*uav.sensor_sig_m,2) + pow(pf_env.env_sig,2) )*2;
+        pdetSig[i] = sqrt( pow(exp_conc[i]*uav.sensor_sig_m,2) + pow(pf_env.env_sig,2) ) * 3;
         if(pdetSig[i] < 1e-100)
 	    pdetSig[i] = 1e-100;
 
@@ -138,9 +143,12 @@ vector<double> ParticleFilter::binary_sensor_model(UavClass uav, double sen_val)
 
 void ParticleFilter::resampling(UavClass uav, vector<double> Likelihood, int8_t sen_model, double sen_val)
 {
-    std::random_device rd;  // Will be used to obtain a seed for the random number engine
-    std::mt19937 gen(rd()); // Standard mersenne_twister_engine seeded with rd()
-    std::uniform_real_distribution<double> rand_data(0.0, 1.0);
+    //std::random_device rd;  // Will be used to obtain a seed for the random number engine
+    //std::mt19937 gen(172); // gen(rd()) Standard mersenne_twister_engine seeded with rd()
+    //std::uniform_real_distribution<double> rand_data(0.0, 1.0);
+
+    default_random_engine gen;
+    uniform_real_distribution<double> rand_data(0.0, 1.0);
 
     double random_select[n_p];
     random_select[0] = rand_data(gen)/n_p;
