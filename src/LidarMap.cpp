@@ -33,7 +33,6 @@ void LidarMap::callback(const sensor_msgs::LaserScan::ConstPtr& msg)
         float a_min = (msg->angle_min) / 180 * M_PI;
         float a_max = (msg->angle_max) / 180 * M_PI;
         float a_gap = (msg->angle_increment) / 180 * M_PI;
-        //float r_min = msg->range_min;
         float r_max = msg->range_max;
         int laser_num = (a_max-a_min)/a_gap;
 
@@ -51,7 +50,6 @@ void LidarMap::callback(const sensor_msgs::LaserScan::ConstPtr& msg)
             {
                 grid_x = round(uav_x + cos(laser_angle)*(j+0.1));
                 grid_y = round(uav_y + sin(laser_angle)*(j+0.1));
-                //cout << "grid_x: " << grid_x << " grid_y: " << grid_y << endl;
                 if(grid_x <0 || grid_y < 0 || grid_x >= map_nx || grid_y >= map_ny)
                     break;
 
