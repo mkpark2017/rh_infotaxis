@@ -152,7 +152,6 @@ int main(int argc, char **argv)
         double del_z_sq = pow(next_goal.z-current_uav.z,2);
         double goal_dist = sqrt(del_x_sq + del_y_sq + del_z_sq);
         // -------------------------Trigger to get measurement-----------------------
-        //cout << "goal_dist: " << goal_dist << endl;
         if(goal_dist < goal_ep) // reaching goal
         {
             if(sensing_conc == -1.0)
