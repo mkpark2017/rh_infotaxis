@@ -1,7 +1,7 @@
 <launch>
   <group ns="UAV1">
-    <param name="source_Q"		type="double" value="13" />
-    <param name="source_D"		type="double" value="0.003" />
+    <param name="source_Q"		type="double" value="2000" />
+    <param name="source_D"		type="double" value="10" />
     <param name="source_tau"		type="double" value="1200" />
     <param name="building_size"		type="double" value="1" />
 
@@ -11,13 +11,12 @@
     <param name="extra_length"		type="double" value="0.5" />
     <param name="adaptive_move_frac"	type="double" value="5" />
     <param name="sensor_sig_multip_est"	type="double" value="0.1" />
-    <param name="env_sig"		type="double" value="1" />
+    <param name="env_sig"		type="double" value="0.5" />
 
-    <param name="max_steps"		type="int" value="100" />
-    <param name="number_of_particles"	type="int" value="2000" />
-    
-    <param name="receding_horizon_length" type="int" value="2" /> 
+    <param name="max_steps"		type="int" value="450" />
+    <param name="number_of_particles"	type="int" value="3000" />
 
+    <param name="receding_horizon_length" type="int" value="3" />
     <node pkg="rh_infotaxis" type="rh_infotaxis_node" name="rh_infotaxis">
     </node>
 

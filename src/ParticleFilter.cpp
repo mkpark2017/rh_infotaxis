@@ -6,7 +6,7 @@ void ParticleFilter::initialization(int num_particles, EnvClass env) //construct
     pf_env = env;
 
     std::random_device rd;  // Will be used to obtain a seed for the random number engine
-    std::mt19937 gen(rd()); // Standard mersenne_twister_engine seeded with rd()
+    std::mt19937 gen(172); // Standard mersenne_twister_engine seeded with rd()
     std::uniform_real_distribution<double> rand_data(0.0, 1.0);
 
     n_p = num_particles;
@@ -27,6 +27,8 @@ void ParticleFilter::initialization(int num_particles, EnvClass env) //construct
     }
 
     Wp_sum = 0;
+    mean = 0;
+
 
 }
 
@@ -66,13 +68,13 @@ vector<double> ParticleFilter::prior(vector<double> likelihood)
 
 double ParticleFilter::vector_std(vector<double> vector) //standard deviation
 {
-    double mean = 0;
+    mean = 0;
     double var = 0;
-    for(int i=0; i<vector.size(); i++)
-        mean += vector[i]/vector.size();
+    for(int i=0; i<n_p; i++)
+        mean += vector[i]/n_p;
 
-    for(int i=0; i<vector.size(); i++)
-        var += (vector[i]*vector[i] - mean) / vector.size();
+    for(int i=0; i<n_p; i++)
+        var += pow(vector[i] - mean, 2) / n_p;
 
     double std = sqrt(var);
     return std;
@@ -89,7 +91,7 @@ vector<double> ParticleFilter::gaussian_sensor_model(UavClass uav, double sen_va
 
     for(int i=0; i<n_p; i++)
     {
-        pdetSig[i] = sqrt( pow(exp_conc[i]*uav.sensor_sig_m,2) + pow(pf_env.env_sig,2) );
+        pdetSig[i] = sqrt( pow(exp_conc[i]*uav.sensor_sig_m,2) + pow(pf_env.env_sig,2) )*2;
         if(pdetSig[i] < 1e-100)
 	    pdetSig[i] = 1e-100;
 
@@ -119,7 +121,7 @@ vector<double> ParticleFilter::binary_sensor_model(UavClass uav, double sen_val)
 
     for(int i=0; i<n_p; i++)
     {
-        pdetSig[i] = sqrt( pow(exp_conc[i]*uav.sensor_sig_m,2) + pow(pf_env.env_sig,2) );
+        pdetSig[i] = sqrt( pow(exp_conc[i]*uav.sensor_sig_m,2) + pow(pf_env.env_sig,2) )*2;
         if(pdetSig[i] < 1e-100)
 	    pdetSig[i] = 1e-100;
 
@@ -145,7 +147,7 @@ void ParticleFilter::resampling(UavClass uav, vector<double> Likelihood, int8_t 
 
 
     vector<double> sum_weight;
-    int num_sector = 10; // resampling sector
+    int num_sector = 1; // resampling sector
     for(int i=0; i<num_sector; i++)
     {
         vector<double> sum_weight_temp;
@@ -170,7 +172,7 @@ void ParticleFilter::resampling(UavClass uav, vector<double> Likelihood, int8_t 
     }
 
     //std::cout << "sum_weight: " << sum_weight[n_p-1] << std::endl;
-
+    //int flag = getchar();
 
     for(int i=1; i<n_p; i++)
     {
@@ -180,6 +182,9 @@ void ParticleFilter::resampling(UavClass uav, vector<double> Likelihood, int8_t 
         //std::cout << "SUM: " << sum_weight[i] << std::endl;
         //std::cout << random_select[i] << std::endl;
     }
+    //std::cout << "sum_weight: " << random_select[n_p-1] << std::endl;
+    //int flag = getchar();
+
     int j =0;
     std::vector<int> indx;
     for(int i=0; i<n_p; i++)
@@ -224,20 +229,20 @@ void ParticleFilter::resampling(UavClass uav, vector<double> Likelihood, int8_t 
         //------------------------------------------STD-----------------------------------------
 
         stdX = vector_std(X);
-        dkX  = stdX/double(num_while_iter) + 0.5;
+        dkX  = stdX/double(num_while_iter); // + 0.1;
         stdY = vector_std(Y);
-        dkY  = stdY/double(num_while_iter) + 0.5;
+        dkY  = stdY/double(num_while_iter); // + 0.1;
         stdZ = vector_std(Z);
-        dkZ  = stdZ/double(num_while_iter) + 0.5;
+        dkZ  = stdZ/double(num_while_iter); // + 0.1;
 
         stdQ   = vector_std(Q);
-        dkQ    = stdQ  / double(num_while_iter) + 0.5;
+        dkQ    = stdQ  / double(num_while_iter); // + 0.1;
         stdPhi = vector_std(Phi);
-        dkPhi  = stdPhi/ double(num_while_iter) + 0.5;
+        dkPhi  = stdPhi/ double(num_while_iter); // + 0.1;
         stdD   = vector_std(D);
-        dkD    = stdD  / double(num_while_iter) + 0.5;
+        dkD    = stdD  / double(num_while_iter); // + 0.1;
         stdTau = vector_std(Tau);
-        dkTau  = stdTau/ double(num_while_iter) + 0.5;
+        dkTau  = stdTau/ double(num_while_iter); // + 0.1;
 
         for(int i=0; i<n_p; i++)
         {
@@ -274,8 +279,10 @@ void ParticleFilter::resampling(UavClass uav, vector<double> Likelihood, int8_t 
         vector<double> check_unique;
         for(int i=0; i<n_p; i++) // keep old samples
         {
+            if(Likelihood[indx[i]]==0)
+                int flag = getchar();
             //if new likelihood is not enough higer than old one
-            if( Likelihood_new[i]/Likelihood[indx[i]] < rand_data(gen) )
+            else if( Likelihood_new[i]/Likelihood[indx[i]] < rand_data(gen) )
             {
                 X[i] = oX[i];
                 Y[i] = oY[i];
@@ -286,13 +293,13 @@ void ParticleFilter::resampling(UavClass uav, vector<double> Likelihood, int8_t 
                 D[i]   = oD[i];
                 Tau[i] = oTau[i];
             }
-            check_unique.push_back(X[i]+Y[i]+Z[i]);
+        //    check_unique.push_back(X[i]+Y[i]+Z[i]);
         }
-        check_unique.erase(unique(check_unique.begin(), check_unique.end() ), check_unique.end() );
-        l_keep = check_unique.size();
-        num_while_iter += 1;
-        if(num_while_iter > 100)
-            l_keep = n_p;
+        //check_unique.erase(unique(check_unique.begin(), check_unique.end() ), check_unique.end() );
+        //l_keep = check_unique.size();
+        //num_while_iter += 1;
+        //if(num_while_iter > 100)
+        //    l_keep = n_p;
     //}
 }
 

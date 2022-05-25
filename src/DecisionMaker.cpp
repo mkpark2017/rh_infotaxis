@@ -100,7 +100,7 @@ void DecisionMaker::RHI_BR(UavClass uav, ParticleFilter pf, int current_rh, vect
                 continue;
             else
             {
-                int8_t sensor_model = 2; // binary sensor model
+                int8_t sensor_model = 2; //1: Gaussian 2: binary sensor model
                 bool reampling_on = false;
                 double current_entropy = 0;
                 for(int j=0; j<temp_pf.n_p; j++)

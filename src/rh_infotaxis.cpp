@@ -47,6 +47,9 @@ int main(int argc, char **argv)
 {
     ros::init(argc, argv, "test");
     ros::NodeHandle n;
+    int max_steps;
+    n.param("max_steps", max_steps, 100);
+
     //-----------------------------------domain setup-------------------------------------
     double source[8], domain[5];
     n.param("source_x",   source[0], 204.0);
@@ -63,6 +66,7 @@ int main(int argc, char **argv)
     n.param("nz",         domain[2], 45.0);
     n.param("dt",         domain[3], 1.0);
     n.param("env_sig",    domain[4], 2.0);
+
     env.initialization(source, domain);
     //----------------------------------particle filter setup---------------------------
     int num_particle = 1000;
@@ -223,9 +227,17 @@ int main(int argc, char **argv)
                 auto process_start = high_resolution_clock::now();
                 DecisionMaker decision(env, lidar_map, total_rh); 
                 int current_rh = 1;
+
+                vector<double> wp_temp = pf.Wpnorm;
 //cout << "Start Decision" << endl;
                 for(int i=0; i<2; i++)
                     decision.RHI_BR(sensing_uav, pf, current_rh);
+                //vector<double> delta = wp_temp - pf.Wpnorm;
+                //double sum_temp = 0;
+                //for(int i=0; i<pf.n_p; i++)
+                //    sum_temp += wp_temp[i] - pf.Wpnorm[i];
+                //cout << sum_temp << endl;
+                //int flag = getchar();
 
                 iteration += 1;
                 cout << "Iteration: " << iteration << endl;
@@ -352,16 +364,31 @@ int main(int argc, char **argv)
         map_2d_msg.data = current_map;
         map_2d_pub.publish(map_2d_msg);
 
-        if(pf.vector_std(pf.Wpnorm) < 3)
+            //for(int i=0; i<pf.n_p; i++)
+            //{
+            //    cout << i << ": " << pf.X[i] << endl;
+            //}
+        double x_std = pf.vector_std(pf.X);
+        //cout << pf.mean << endl;
+
+        double y_std = pf.vector_std(pf.Y);
+        //cout << pf.mean << endl;
+
+        //cout << "STD X: " << x_std << endl;
+        //cout << "STD Y: " << y_std << endl;
+        if(sqrt(pow(x_std,2)+pow(y_std,2))  < 3 || max_steps < iteration)
         {
             double xmean, ymean, zmean;
             for(int i=0; i<pf.n_p; i++)
             {
                 xmean += pf.Wpnorm[i]*pf.X[i];
-                zmean += pf.Wpnorm[i]*pf.Y[i];
-                ymean += pf.Wpnorm[i]*pf.Z[i];
+                ymean += pf.Wpnorm[i]*pf.Y[i];
+                zmean += pf.Wpnorm[i]*pf.Z[i];
             }
-            if(sqrt(pow(source[0]-xmean,2)+pow(source[1]-ymean,2)+pow(source[3]-zmean,2)) < 6)
+            cout << "X " << xmean << "Y " << ymean << "Z " << zmean << endl;
+            double dist_3d = sqrt(pow(source[0]-xmean,2)+pow(source[1]-ymean,2)+pow(source[3]-zmean,2));
+            cout << "DIST: " << dist_3d << endl;
+            if(dist_3d < 20)
                 cout << "SUCCESS" << endl;
             else
                 cout << "FAILED" << endl;
@@ -369,6 +396,7 @@ int main(int argc, char **argv)
             ros::shutdown();
             //initialization
         }
+
         ros::spinOnce();
         //cout << "uav_x_now: " << uav.x << endl;;
         /*
