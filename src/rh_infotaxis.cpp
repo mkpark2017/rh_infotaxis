@@ -144,7 +144,139 @@ int main(int argc, char **argv)
 
     int iteration = 0;
     double time_sum = 0;
+​
 
+152
+
+        for(int j=0; j<(n_p/num_sector); j++)
+
+153
+
+            sum_weight_temp[j] = sum_weight_temp[j]/sum_weight_temp.back() / num_sector;
+
+154
+
+​
+
+155
+
+        if(i==0)
+
+156
+
+        {
+
+157
+
+            for(int j=0; j<(n_p/num_sector); j++)
+
+158
+
+                sum_weight.push_back(sum_weight_temp[j]);
+
+159
+
+        }
+
+160
+
+        else
+
+161
+
+        {
+
+162
+
+            //std::cout << sum_weight[i*(n_p/num_sector)-1] << std::endl;
+
+163
+
+            for(int j=0; j<(n_p/num_sector); j++)
+
+164
+
+                sum_weight.push_back(sum_weight[i*(n_p/num_sector)-1] + sum_weight_temp[j]);
+
+165
+
+        }
+
+166
+
+    }
+
+167
+
+​
+
+168
+
+    //std::cout << "sum_weight: " << sum_weight[n_p-1] << std::endl;
+
+169
+
+    //int flag = getchar();
+
+170
+
+​
+
+171
+
+    for(int i=1; i<n_p; i++)
+
+172
+
+    {
+
+173
+
+        //sum_weight[i] = sum_weight[i-1] + Wpnorm[i];
+
+174
+
+        random_select[i] = double(i)/n_p + rand_data(gen)/n_p;
+
+175
+
+        //std::cout << "WP: " << Wpnorm[i] << std::endl;
+
+176
+
+        //std::cout << "SUM: " << sum_weight[i] << std::endl;
+
+177
+
+        //std::cout << random_select[i] << std::endl;
+
+178
+
+    }
+
+179
+
+    //std::cout << "sum_weight: " << random_select[n_p-1] << std::endl;
+
+180
+
+    //int flag = getchar();
+
+181
+
+​
+
+182
+
+    int j =0;
+
+183
+
+    std::vector<int> indx;
+
+184
+
+    for(int i=0; i<n_p; i++)
     while(ros::ok())
     {
         double del_x_sq = pow(next_goal.x-current_uav.x,2);
@@ -186,7 +318,139 @@ int main(int argc, char **argv)
                 new_location.pose.position.z = sensing_uav.z;
                 path_msg.poses.push_back(new_location);
                 path_pub.publish(path_msg);
+​
 
+152
+
+        for(int j=0; j<(n_p/num_sector); j++)
+
+153
+
+            sum_weight_temp[j] = sum_weight_temp[j]/sum_weight_temp.back() / num_sector;
+
+154
+
+​
+
+155
+
+        if(i==0)
+
+156
+
+        {
+
+157
+
+            for(int j=0; j<(n_p/num_sector); j++)
+
+158
+
+                sum_weight.push_back(sum_weight_temp[j]);
+
+159
+
+        }
+
+160
+
+        else
+
+161
+
+        {
+
+162
+
+            //std::cout << sum_weight[i*(n_p/num_sector)-1] << std::endl;
+
+163
+
+            for(int j=0; j<(n_p/num_sector); j++)
+
+164
+
+                sum_weight.push_back(sum_weight[i*(n_p/num_sector)-1] + sum_weight_temp[j]);
+
+165
+
+        }
+
+166
+
+    }
+
+167
+
+​
+
+168
+
+    //std::cout << "sum_weight: " << sum_weight[n_p-1] << std::endl;
+
+169
+
+    //int flag = getchar();
+
+170
+
+​
+
+171
+
+    for(int i=1; i<n_p; i++)
+
+172
+
+    {
+
+173
+
+        //sum_weight[i] = sum_weight[i-1] + Wpnorm[i];
+
+174
+
+        random_select[i] = double(i)/n_p + rand_data(gen)/n_p;
+
+175
+
+        //std::cout << "WP: " << Wpnorm[i] << std::endl;
+
+176
+
+        //std::cout << "SUM: " << sum_weight[i] << std::endl;
+
+177
+
+        //std::cout << random_select[i] << std::endl;
+
+178
+
+    }
+
+179
+
+    //std::cout << "sum_weight: " << random_select[n_p-1] << std::endl;
+
+180
+
+    //int flag = getchar();
+
+181
+
+​
+
+182
+
+    int j =0;
+
+183
+
+    std::vector<int> indx;
+
+184
+
+    for(int i=0; i<n_p; i++)
 
                 double sen_val = sensing_conc/sensing_iter;
                 sensing_uav.sensor_value = sen_val;
@@ -204,7 +468,139 @@ int main(int argc, char **argv)
                 lidar_map.trigger = true; //then start map update
                 while(!lidar_map.updated && ros::ok())
                 {
-                    ros::spinOnce(); // run LidarMap::Callback function
+                    ros::spinOnce(); // run LidarMap::Callback fu​
+
+152
+
+        for(int j=0; j<(n_p/num_sector); j++)
+
+153
+
+            sum_weight_temp[j] = sum_weight_temp[j]/sum_weight_temp.back() / num_sector;
+
+154
+
+​
+
+155
+
+        if(i==0)
+
+156
+
+        {
+
+157
+
+            for(int j=0; j<(n_p/num_sector); j++)
+
+158
+
+                sum_weight.push_back(sum_weight_temp[j]);
+
+159
+
+        }
+
+160
+
+        else
+
+161
+
+        {
+
+162
+
+            //std::cout << sum_weight[i*(n_p/num_sector)-1] << std::endl;
+
+163
+
+            for(int j=0; j<(n_p/num_sector); j++)
+
+164
+
+                sum_weight.push_back(sum_weight[i*(n_p/num_sector)-1] + sum_weight_temp[j]);
+
+165
+
+        }
+
+166
+
+    }
+
+167
+
+​
+
+168
+
+    //std::cout << "sum_weight: " << sum_weight[n_p-1] << std::endl;
+
+169
+
+    //int flag = getchar();
+
+170
+
+​
+
+171
+
+    for(int i=1; i<n_p; i++)
+
+172
+
+    {
+
+173
+
+        //sum_weight[i] = sum_weight[i-1] + Wpnorm[i];
+
+174
+
+        random_select[i] = double(i)/n_p + rand_data(gen)/n_p;
+
+175
+
+        //std::cout << "WP: " << Wpnorm[i] << std::endl;
+
+176
+
+        //std::cout << "SUM: " << sum_weight[i] << std::endl;
+
+177
+
+        //std::cout << random_select[i] << std::endl;
+
+178
+
+    }
+
+179
+
+    //std::cout << "sum_weight: " << random_select[n_p-1] << std::endl;
+
+180
+
+    //int flag = getchar();
+
+181
+
+​
+
+182
+
+    int j =0;
+
+183
+
+    std::vector<int> indx;
+
+184
+
+    for(int i=0; i<n_p; i++)nction
                     next_goal_pub.publish(next_goal_msg);
                     map_rate.sleep();
                 }
@@ -325,7 +721,7 @@ int main(int argc, char **argv)
                 ymean += pf.Wpnorm[i]*pf.Y[i];
                 zmean += pf.Wpnorm[i]*pf.Z[i];
             }
-            cout << "X " << xmean << "Y " << ymean << "Z " << zmean << endl;
+            cout << "X " << xmean << " Y " << ymean << " Z " << zmean << endl;
             double dist_3d = sqrt(pow(source[0]-xmean,2)+pow(source[1]-ymean,2)+pow(source[3]-zmean,2));
             cout << "DIST: " << dist_3d << endl;
             if(dist_3d < 20)
