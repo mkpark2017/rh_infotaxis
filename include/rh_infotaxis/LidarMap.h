@@ -1,7 +1,7 @@
+
 #ifndef LIDAR_MAP_H_
 #define LIDAR_MAP_H_
 
-//some generically useful stuff to include...
 #include <vector>
 #include <cmath> //M_PI, round
 #include <iostream> //cout

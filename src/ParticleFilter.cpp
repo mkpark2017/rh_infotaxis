@@ -1,13 +1,12 @@
 #include "rh_infotaxis/ParticleFilter.h"
 
+using namespace std;
 
 void ParticleFilter::initialization(int num_particles, EnvClass env) //constructor
 {
     pf_env = env;
-
-    std::random_device rd;  // Will be used to obtain a seed for the random number engine
-    std::mt19937 gen(rd()); // Standard mersenne_twister_engine seeded with rd()
-    std::uniform_real_distribution<double> rand_data(0.0, 1.0);
+    default_random_engine gen(49381);
+    uniform_real_distribution<double> rand_data(0.0, 1.0);
 
     n_p = num_particles;
     for(int i=0; i<n_p; i++)
@@ -18,7 +17,6 @@ void ParticleFilter::initialization(int num_particles, EnvClass env) //construct
         Z.push_back( rand_data(gen)*pf_env.nz );
         
         Q.push_back( rand_data(gen)*pf_env.source_q );
-        //Phi.push_back( rand_data(gen)*pf_env.source_phi );
         Phi.push_back( pf_env.source_phi );
         D.push_back( rand_data(gen)*pf_env.source_d );
         Tau.push_back( rand_data(gen)*pf_env.source_tau );
@@ -27,6 +25,8 @@ void ParticleFilter::initialization(int num_particles, EnvClass env) //construct
     }
 
     Wp_sum = 0;
+    mean = 0;
+
 
 }
 
@@ -43,10 +43,7 @@ vector<double> ParticleFilter::isotropic_plume(UavClass uav)
         double sensor_space = (uav.sen_h_range*uav.sen_h_range) * uav.sen_v_range;
         //horizontal size = 3m X 3m, vertical size = 1m
         exp_conc.push_back(rate * pf_env.dt * sensor_space);
-
-        //std::cout << exp_conc[i] << "  ";
     }
-    //std::cout << std::endl;
     return exp_conc;
 }
 
@@ -66,13 +63,13 @@ vector<double> ParticleFilter::prior(vector<double> likelihood)
 
 double ParticleFilter::vector_std(vector<double> vector) //standard deviation
 {
-    double mean = 0;
+    mean = 0;
     double var = 0;
-    for(int i=0; i<vector.size(); i++)
-        mean += vector[i]/vector.size();
+    for(int i=0; i<n_p; i++)
+        mean += vector[i]/n_p;
 
-    for(int i=0; i<vector.size(); i++)
-        var += (vector[i]*vector[i] - mean) / vector.size();
+    for(int i=0; i<n_p; i++)
+        var += pow(vector[i] - mean, 2) / n_p;
 
     double std = sqrt(var);
     return std;
@@ -89,7 +86,7 @@ vector<double> ParticleFilter::gaussian_sensor_model(UavClass uav, double sen_va
 
     for(int i=0; i<n_p; i++)
     {
-        pdetSig[i] = sqrt( pow(exp_conc[i]*uav.sensor_sig_m,2) + pow(pf_env.env_sig,2) );
+        pdetSig[i] = sqrt( pow(exp_conc[i]*uav.sensor_sig_m,2) + pow(pf_env.env_sig,2) ) * 3;
         if(pdetSig[i] < 1e-100)
 	    pdetSig[i] = 1e-100;
 
@@ -98,19 +95,12 @@ vector<double> ParticleFilter::gaussian_sensor_model(UavClass uav, double sen_va
         Likelihood.push_back(1/(sqrt(2*M_PI) * pdetSig[i]) * exp(-pow(ga_val[i],2) / 2));
         if(Likelihood[i] < 1e-100)
 	    Likelihood[i] = 1e-100;
-        /*
-        std::cout << "-------------------------------------------" << std::endl;
-        std::cout << "Wp_origin: " << Wpnorm[i] << std::endl;
-        std::cout << "Exp_conc: " << exp_conc[i] << std::endl;
-        std::cout << "likelihood: " << Likelihood[i] << std::endl;
-        */
     }
     return Likelihood;
 }
 
 vector<double> ParticleFilter::binary_sensor_model(UavClass uav, double sen_val)
 {
-    //std::cout << "sen_val: " << sen_val << std::endl;
     vector<double> exp_conc;
     exp_conc = isotropic_plume(uav);
 
@@ -119,7 +109,7 @@ vector<double> ParticleFilter::binary_sensor_model(UavClass uav, double sen_val)
 
     for(int i=0; i<n_p; i++)
     {
-        pdetSig[i] = sqrt( pow(exp_conc[i]*uav.sensor_sig_m,2) + pow(pf_env.env_sig,2) );
+        pdetSig[i] = sqrt( pow(exp_conc[i]*uav.sensor_sig_m,2) + pow(pf_env.env_sig,2) )*2;
         if(pdetSig[i] < 1e-100)
 	    pdetSig[i] = 1e-100;
 
@@ -136,16 +126,15 @@ vector<double> ParticleFilter::binary_sensor_model(UavClass uav, double sen_val)
 
 void ParticleFilter::resampling(UavClass uav, vector<double> Likelihood, int8_t sen_model, double sen_val)
 {
-    std::random_device rd;  // Will be used to obtain a seed for the random number engine
-    std::mt19937 gen(rd()); // Standard mersenne_twister_engine seeded with rd()
-    std::uniform_real_distribution<double> rand_data(0.0, 1.0);
+    default_random_engine gen;
+    uniform_real_distribution<double> rand_data(0.0, 1.0);
 
     double random_select[n_p];
     random_select[0] = rand_data(gen)/n_p;
 
 
     vector<double> sum_weight;
-    int num_sector = 10; // resampling sector
+    int num_sector = 1; // resampling sector
     for(int i=0; i<num_sector; i++)
     {
         vector<double> sum_weight_temp;
@@ -163,23 +152,18 @@ void ParticleFilter::resampling(UavClass uav, vector<double> Likelihood, int8_t 
         }
         else
         {
-            //std::cout << sum_weight[i*(n_p/num_sector)-1] << std::endl;
             for(int j=0; j<(n_p/num_sector); j++)
                 sum_weight.push_back(sum_weight[i*(n_p/num_sector)-1] + sum_weight_temp[j]);
         }
     }
 
-    //std::cout << "sum_weight: " << sum_weight[n_p-1] << std::endl;
-
 
     for(int i=1; i<n_p; i++)
     {
-        //sum_weight[i] = sum_weight[i-1] + Wpnorm[i];
         random_select[i] = double(i)/n_p + rand_data(gen)/n_p;
-        //std::cout << "WP: " << Wpnorm[i] << std::endl;
-        //std::cout << "SUM: " << sum_weight[i] << std::endl;
-        //std::cout << random_select[i] << std::endl;
     }
+
+
     int j =0;
     std::vector<int> indx;
     for(int i=0; i<n_p; i++)
@@ -189,8 +173,6 @@ void ParticleFilter::resampling(UavClass uav, vector<double> Likelihood, int8_t 
             j += 1;
         }
         indx.push_back(j);
-
-        //std::cout << "indx: " << indx[i] << std::endl;
     }
 
     //----------------------------------MCMC------------------------------------
@@ -216,84 +198,76 @@ void ParticleFilter::resampling(UavClass uav, vector<double> Likelihood, int8_t 
 
     int num_while_iter = 1;
     double l_keep = indx_unique.size();
-    //while(l_keep < n_p*0.5)
-    //{
-        double stdX, stdY, stdZ, stdQ, stdPhi, stdD, stdTau;
-        double dkX, dkY, dkZ, dkQ, dkPhi, dkD, dkTau;
-        double oX[n_p], oY[n_p], oZ[n_p], oQ[n_p], oPhi[n_p], oD[n_p], oTau[n_p]; //old samples
-        //------------------------------------------STD-----------------------------------------
 
-        stdX = vector_std(X);
-        dkX  = stdX/double(num_while_iter) + 0.5;
-        stdY = vector_std(Y);
-        dkY  = stdY/double(num_while_iter) + 0.5;
-        stdZ = vector_std(Z);
-        dkZ  = stdZ/double(num_while_iter) + 0.5;
+    double stdX, stdY, stdZ, stdQ, stdPhi, stdD, stdTau;
+    double dkX, dkY, dkZ, dkQ, dkPhi, dkD, dkTau;
+    double oX[n_p], oY[n_p], oZ[n_p], oQ[n_p], oPhi[n_p], oD[n_p], oTau[n_p]; //old samples
+    //------------------------------------------STD-----------------------------------------
 
-        stdQ   = vector_std(Q);
-        dkQ    = stdQ  / double(num_while_iter) + 0.5;
-        stdPhi = vector_std(Phi);
-        dkPhi  = stdPhi/ double(num_while_iter) + 0.5;
-        stdD   = vector_std(D);
-        dkD    = stdD  / double(num_while_iter) + 0.5;
-        stdTau = vector_std(Tau);
-        dkTau  = stdTau/ double(num_while_iter) + 0.5;
+    stdX = vector_std(X);
+    dkX  = stdX/double(num_while_iter); // + 0.1;
+    stdY = vector_std(Y);
+    dkY  = stdY/double(num_while_iter); // + 0.1;
+    stdZ = vector_std(Z);
+    dkZ  = stdZ/double(num_while_iter); // + 0.1;
 
-        for(int i=0; i<n_p; i++)
+    stdQ   = vector_std(Q);
+    dkQ    = stdQ  / double(num_while_iter); // + 0.1;
+    stdPhi = vector_std(Phi);
+    dkPhi  = stdPhi/ double(num_while_iter); // + 0.1;
+    stdD   = vector_std(D);
+    dkD    = stdD  / double(num_while_iter); // + 0.1;
+    stdTau = vector_std(Tau);
+    dkTau  = stdTau/ double(num_while_iter); // + 0.1;
+
+    for(int i=0; i<n_p; i++)
+    {
+        oX[i] = X[i];
+        oY[i] = Y[i];
+        oZ[i] = Z[i];
+
+        oQ[i]   = Q[i];
+        oPhi[i] = Phi[i];
+        oD[i]   = D[i];
+        oTau[i] = Tau[i];
+
+        X[i] = oX[i] + hopt * dkX * rand_data(gen);
+        Y[i] = oY[i] + hopt * dkY * rand_data(gen);
+        Z[i] = oZ[i] + hopt * dkZ * rand_data(gen);
+
+        Q[i]   = oQ[i]   + hopt * dkQ   * rand_data(gen);
+        Phi[i] = oPhi[i] + hopt * dkPhi * rand_data(gen);
+        D[i]   = oD[i]   + hopt * dkD   * rand_data(gen);
+        Tau[i] = oTau[i] + hopt * dkTau * rand_data(gen);
+    }
+    vector<double> Likelihood_new;
+    if(sen_model == 1) //gaussian
+        Likelihood_new = gaussian_sensor_model(uav, sen_val);
+    else if(sen_model == 2) //binary
+        Likelihood_new = binary_sensor_model(uav, sen_val);
+    else
+        std::cout << "WARNING: Undefined sensor model!!!!!!!!!!!" << std::endl;
+
+    Likelihood_new = prior(Likelihood_new);
+    bool keep[n_p] = {0,};
+    vector<double> check_unique;
+    for(int i=0; i<n_p; i++) // keep old samples
+    {
+        if(Likelihood[indx[i]]==0)
+            int flag = getchar();
+        //if new likelihood is not enough higer than old one
+        else if( Likelihood_new[i]/Likelihood[indx[i]] < rand_data(gen) )
         {
-            oX[i] = X[i];
-            oY[i] = Y[i];
-            oZ[i] = Z[i];
+            X[i] = oX[i];
+            Y[i] = oY[i];
+            Z[i] = oZ[i];
 
-            oQ[i]   = Q[i];
-            oPhi[i] = Phi[i];
-            oD[i]   = D[i];
-            oTau[i] = Tau[i];
-
-            X[i] = oX[i] + hopt * dkX * rand_data(gen);
-            Y[i] = oY[i] + hopt * dkY * rand_data(gen);
-            Z[i] = oZ[i] + hopt * dkZ * rand_data(gen);
-
-            Q[i]   = oQ[i]   + hopt * dkQ   * rand_data(gen);
-            Phi[i] = oPhi[i] + hopt * dkPhi * rand_data(gen);
-            D[i]   = oD[i]   + hopt * dkD   * rand_data(gen);
-            Tau[i] = oTau[i] + hopt * dkTau * rand_data(gen);
+            Q[i]   = oQ[i];
+            Phi[i] = oPhi[i];
+            D[i]   = oD[i];
+            Tau[i] = oTau[i];
         }
-
-        vector<double> Likelihood_new;
-        if(sen_model == 1) //gaussian
-            Likelihood_new = gaussian_sensor_model(uav, sen_val);
-        else if(sen_model == 2) //binary
-            Likelihood_new = binary_sensor_model(uav, sen_val);
-        else
-            std::cout << "WARNING: Undefined sensor model!!!!!!!!!!!" << std::endl;
-
-        Likelihood_new = prior(Likelihood_new);
-
-        bool keep[n_p] = {0,};
-        vector<double> check_unique;
-        for(int i=0; i<n_p; i++) // keep old samples
-        {
-            //if new likelihood is not enough higer than old one
-            if( Likelihood_new[i]/Likelihood[indx[i]] < rand_data(gen) )
-            {
-                X[i] = oX[i];
-                Y[i] = oY[i];
-                Z[i] = oZ[i];
-
-                Q[i]   = oQ[i];
-                Phi[i] = oPhi[i];
-                D[i]   = oD[i];
-                Tau[i] = oTau[i];
-            }
-            check_unique.push_back(X[i]+Y[i]+Z[i]);
-        }
-        check_unique.erase(unique(check_unique.begin(), check_unique.end() ), check_unique.end() );
-        l_keep = check_unique.size();
-        num_while_iter += 1;
-        if(num_while_iter > 100)
-            l_keep = n_p;
-    //}
+    }
 }
 
 
@@ -320,11 +294,8 @@ void ParticleFilter::weight_update(UavClass uav, int8_t sen_model, double sen_va
     for(int i=0; i<n_p; i++)
     {
         Wpnorm[i] = Wpnorm[i]/Wp_sum_temp;
-        //std::cout << i << " Wp_new: " << Wpnorm[i] << std::endl;
-
         Neff_inv += pow(Wpnorm[i],2);
     }
-    //std::cout << "Neff :" << 1.0/Neff_inv << std::endl;
 
     if(1.0/Neff_inv < 0.5*n_p && resamp_on)
     {
@@ -332,8 +303,6 @@ void ParticleFilter::weight_update(UavClass uav, int8_t sen_model, double sen_va
         for(int i=0; i<n_p; i++)
             Wpnorm[i] = 1.0/n_p;
     }
-    //std::cout << "Wp sum: " << Wp_sum_temp << std::endl;
     Wp_sum = Wp_sum_temp;
 
 }
-

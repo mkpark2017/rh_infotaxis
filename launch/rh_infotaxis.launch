@@ -16,11 +16,14 @@
     <param name="env_sig"		type="double" value="0.5" />
 
     <param name="max_steps"		type="int" value="450" />
-    <param name="number_of_particles"	type="int" value="3000" />
+    <param name="number_of_particles"	type="int" value="10000" />
 
     <param name="receding_horizon_length" type="int" value="3" />
     <node pkg="rh_infotaxis" type="rh_infotaxis_node" name="rh_infotaxis">
     </node>
 
   </group>
+
+  <node type="rviz" name="rviz" pkg="rviz" args="-d $(find rh_infotaxis)/Rviz/Viewer.rviz" />
+
 </launch>
