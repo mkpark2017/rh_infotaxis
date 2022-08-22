@@ -23,6 +23,11 @@ public:
 
     double dt;
     double env_sig;
+
+private:
+    //void sensor_model();
+    //void dispersion_model();
+    //void resampling();
 };
 
 #endif

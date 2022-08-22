@@ -4,6 +4,7 @@
 #include "rh_infotaxis/LidarMap.h"
 #include "rh_infotaxis/DecisionMaker.h"
 /*--------------------------*/
+//#include <stdr_msgs/AddCO2Source.h>
 #include <sensor_msgs/LaserScan.h>
 #include <nav_msgs/OccupancyGrid.h>
 #include <geometry_msgs/PoseStamped.h>
@@ -46,9 +47,6 @@ int main(int argc, char **argv)
 {
     ros::init(argc, argv, "test");
     ros::NodeHandle n;
-    int max_steps;
-    n.param("max_steps", max_steps, 100);
-
     //-----------------------------------domain setup-------------------------------------
     double source[8], domain[5];
     n.param("source_x",   source[0], 204.0);
@@ -65,7 +63,6 @@ int main(int argc, char **argv)
     n.param("nz",         domain[2], 45.0);
     n.param("dt",         domain[3], 1.0);
     n.param("env_sig",    domain[4], 2.0);
-
     env.initialization(source, domain);
     //----------------------------------particle filter setup---------------------------
     int num_particle = 1000;
@@ -144,139 +141,7 @@ int main(int argc, char **argv)
 
     int iteration = 0;
     double time_sum = 0;
-​
 
-152
-
-        for(int j=0; j<(n_p/num_sector); j++)
-
-153
-
-            sum_weight_temp[j] = sum_weight_temp[j]/sum_weight_temp.back() / num_sector;
-
-154
-
-​
-
-155
-
-        if(i==0)
-
-156
-
-        {
-
-157
-
-            for(int j=0; j<(n_p/num_sector); j++)
-
-158
-
-                sum_weight.push_back(sum_weight_temp[j]);
-
-159
-
-        }
-
-160
-
-        else
-
-161
-
-        {
-
-162
-
-            //std::cout << sum_weight[i*(n_p/num_sector)-1] << std::endl;
-
-163
-
-            for(int j=0; j<(n_p/num_sector); j++)
-
-164
-
-                sum_weight.push_back(sum_weight[i*(n_p/num_sector)-1] + sum_weight_temp[j]);
-
-165
-
-        }
-
-166
-
-    }
-
-167
-
-​
-
-168
-
-    //std::cout << "sum_weight: " << sum_weight[n_p-1] << std::endl;
-
-169
-
-    //int flag = getchar();
-
-170
-
-​
-
-171
-
-    for(int i=1; i<n_p; i++)
-
-172
-
-    {
-
-173
-
-        //sum_weight[i] = sum_weight[i-1] + Wpnorm[i];
-
-174
-
-        random_select[i] = double(i)/n_p + rand_data(gen)/n_p;
-
-175
-
-        //std::cout << "WP: " << Wpnorm[i] << std::endl;
-
-176
-
-        //std::cout << "SUM: " << sum_weight[i] << std::endl;
-
-177
-
-        //std::cout << random_select[i] << std::endl;
-
-178
-
-    }
-
-179
-
-    //std::cout << "sum_weight: " << random_select[n_p-1] << std::endl;
-
-180
-
-    //int flag = getchar();
-
-181
-
-​
-
-182
-
-    int j =0;
-
-183
-
-    std::vector<int> indx;
-
-184
-
-    for(int i=0; i<n_p; i++)
     while(ros::ok())
     {
         double del_x_sq = pow(next_goal.x-current_uav.x,2);
@@ -284,6 +149,7 @@ int main(int argc, char **argv)
         double del_z_sq = pow(next_goal.z-current_uav.z,2);
         double goal_dist = sqrt(del_x_sq + del_y_sq + del_z_sq);
         // -------------------------Trigger to get measurement-----------------------
+        //cout << "goal_dist: " << goal_dist << endl;
         if(goal_dist < goal_ep) // reaching goal
         {
             if(sensing_conc == -1.0)
@@ -292,7 +158,7 @@ int main(int argc, char **argv)
                 sensing_conc = 0.0;
                 sensing_iter = 0;
                 sensing_start = high_resolution_clock::now();
-
+                //cout << "-------------------------------------------------" << endl;
             }
             sensing_now = high_resolution_clock::now();
             sensing_duration = sensing_now - sensing_start;
@@ -303,14 +169,21 @@ int main(int argc, char **argv)
                 sensing_pose[0] += current_uav.x;
                 sensing_pose[1] += current_uav.y;
                 sensing_pose[2] += current_uav.z;
-                sensing_conc    += current_uav.sensor_value;
+                sensing_conc    += current_uav.sensor_value; //string to double
                 sensing_iter    += 1;
+                //cout << "sensing_done" << endl;
             }
             else
             {
+                //cout << "sensing duration: " << sensing_duration.count() << endl;
+                //cout << "sensing num: " << sensing_iter << endl;
                 sensing_uav.x            = sensing_pose[0]/sensing_iter; // taking average
                 sensing_uav.y            = sensing_pose[1]/sensing_iter;
                 sensing_uav.z            = sensing_pose[2]/sensing_iter;
+                //cout << "Current sensing location: [";
+                //cout << sensing_uav.x << ", ";
+                //cout << sensing_uav.y << ", ";
+                //cout << sensing_uav.z << "]" << endl;
 
                 geometry_msgs::PoseStamped new_location;
                 new_location.pose.position.x = sensing_uav.x;
@@ -318,139 +191,7 @@ int main(int argc, char **argv)
                 new_location.pose.position.z = sensing_uav.z;
                 path_msg.poses.push_back(new_location);
                 path_pub.publish(path_msg);
-​
 
-152
-
-        for(int j=0; j<(n_p/num_sector); j++)
-
-153
-
-            sum_weight_temp[j] = sum_weight_temp[j]/sum_weight_temp.back() / num_sector;
-
-154
-
-​
-
-155
-
-        if(i==0)
-
-156
-
-        {
-
-157
-
-            for(int j=0; j<(n_p/num_sector); j++)
-
-158
-
-                sum_weight.push_back(sum_weight_temp[j]);
-
-159
-
-        }
-
-160
-
-        else
-
-161
-
-        {
-
-162
-
-            //std::cout << sum_weight[i*(n_p/num_sector)-1] << std::endl;
-
-163
-
-            for(int j=0; j<(n_p/num_sector); j++)
-
-164
-
-                sum_weight.push_back(sum_weight[i*(n_p/num_sector)-1] + sum_weight_temp[j]);
-
-165
-
-        }
-
-166
-
-    }
-
-167
-
-​
-
-168
-
-    //std::cout << "sum_weight: " << sum_weight[n_p-1] << std::endl;
-
-169
-
-    //int flag = getchar();
-
-170
-
-​
-
-171
-
-    for(int i=1; i<n_p; i++)
-
-172
-
-    {
-
-173
-
-        //sum_weight[i] = sum_weight[i-1] + Wpnorm[i];
-
-174
-
-        random_select[i] = double(i)/n_p + rand_data(gen)/n_p;
-
-175
-
-        //std::cout << "WP: " << Wpnorm[i] << std::endl;
-
-176
-
-        //std::cout << "SUM: " << sum_weight[i] << std::endl;
-
-177
-
-        //std::cout << random_select[i] << std::endl;
-
-178
-
-    }
-
-179
-
-    //std::cout << "sum_weight: " << random_select[n_p-1] << std::endl;
-
-180
-
-    //int flag = getchar();
-
-181
-
-​
-
-182
-
-    int j =0;
-
-183
-
-    std::vector<int> indx;
-
-184
-
-    for(int i=0; i<n_p; i++)
 
                 double sen_val = sensing_conc/sensing_iter;
                 sensing_uav.sensor_value = sen_val;
@@ -464,147 +205,17 @@ int main(int argc, char **argv)
                 pf.weight_update(sensing_uav, sensor_model, sen_val, resampling_on);
 
                 //--------------lidar map update-----------------------
+                //cout << "Start lidar update" << endl;
                 lidar_map.lidar_uav_pose_update(sensing_uav);
                 lidar_map.trigger = true; //then start map update
                 while(!lidar_map.updated && ros::ok())
                 {
-                    ros::spinOnce(); // run LidarMap::Callback fu​
-
-152
-
-        for(int j=0; j<(n_p/num_sector); j++)
-
-153
-
-            sum_weight_temp[j] = sum_weight_temp[j]/sum_weight_temp.back() / num_sector;
-
-154
-
-​
-
-155
-
-        if(i==0)
-
-156
-
-        {
-
-157
-
-            for(int j=0; j<(n_p/num_sector); j++)
-
-158
-
-                sum_weight.push_back(sum_weight_temp[j]);
-
-159
-
-        }
-
-160
-
-        else
-
-161
-
-        {
-
-162
-
-            //std::cout << sum_weight[i*(n_p/num_sector)-1] << std::endl;
-
-163
-
-            for(int j=0; j<(n_p/num_sector); j++)
-
-164
-
-                sum_weight.push_back(sum_weight[i*(n_p/num_sector)-1] + sum_weight_temp[j]);
-
-165
-
-        }
-
-166
-
-    }
-
-167
-
-​
-
-168
-
-    //std::cout << "sum_weight: " << sum_weight[n_p-1] << std::endl;
-
-169
-
-    //int flag = getchar();
-
-170
-
-​
-
-171
-
-    for(int i=1; i<n_p; i++)
-
-172
-
-    {
-
-173
-
-        //sum_weight[i] = sum_weight[i-1] + Wpnorm[i];
-
-174
-
-        random_select[i] = double(i)/n_p + rand_data(gen)/n_p;
-
-175
-
-        //std::cout << "WP: " << Wpnorm[i] << std::endl;
-
-176
-
-        //std::cout << "SUM: " << sum_weight[i] << std::endl;
-
-177
-
-        //std::cout << random_select[i] << std::endl;
-
-178
-
-    }
-
-179
-
-    //std::cout << "sum_weight: " << random_select[n_p-1] << std::endl;
-
-180
-
-    //int flag = getchar();
-
-181
-
-​
-
-182
-
-    int j =0;
-
-183
-
-    std::vector<int> indx;
-
-184
-
-    for(int i=0; i<n_p; i++)nction
+                    //cout << "NOW MAP UPDATING" << endl;
+                    ros::spinOnce(); // run LidarMap::Callback function
                     next_goal_pub.publish(next_goal_msg);
                     map_rate.sleep();
                 }
-
+//cout << "Map Updated" << endl;
                 lidar_map.trigger = false;
                 
                 //------------decision making (new goal)---------------
@@ -612,12 +223,9 @@ int main(int argc, char **argv)
                 auto process_start = high_resolution_clock::now();
                 DecisionMaker decision(env, lidar_map, total_rh); 
                 int current_rh = 1;
-
-                vector<double> wp_temp = pf.Wpnorm;
-
+//cout << "Start Decision" << endl;
                 for(int i=0; i<2; i++)
                     decision.RHI_BR(sensing_uav, pf, current_rh);
-
 
                 iteration += 1;
                 cout << "Iteration: " << iteration << endl;
@@ -629,7 +237,27 @@ int main(int argc, char **argv)
 
                 cout << "Processing average time: " << time_avg << endl;
 
-
+//cout << "Done Decision" << endl;
+                //next_goal = decision.new_goal;
+                /*
+		cout << "num rh decision at main: " << decision.rh_decision.size() << endl;
+        	for(int a =0; a<decision.rh_decision.size() ; a++)
+	        {
+		    cout << decision.rh_entropy[a] << " " << endl;
+	            for(int b =0; b<decision.rh_decision[a].size(); b++)
+	            {
+		        cout << static_cast<int16_t>(decision.rh_decision[a][b]) << " ";
+		        //cout << decision.rh_entropy[a][b] << " ";
+		    }
+		    cout << endl;
+	            for(int b =0; b<decision.rh_decision[a].size(); b++)
+	            {
+		        cout << static_cast<int16_t>(decision.max_decision[b]) << " ";
+		        //cout << decision.rh_entropy[a][b] << " ";
+		    }
+		    cout << endl;
+		}
+                */
                 pcl::PointCloud<pcl::PointXYZRGB> next_goal_list_XYZRGB;
                 pcl::PCLPointCloud2 next_goal_obj;
 
@@ -670,10 +298,14 @@ int main(int argc, char **argv)
 
 
 
+
+//cout << "a" << endl;
+//cout << decision.rh_decision.size() << endl;
+//cout << decision.max_decision.size() << endl;
                 next_goal.x = sensing_uav.x + sensing_uav.xnew[decision.max_decision[0]];
                 next_goal.y = sensing_uav.y + sensing_uav.ynew[decision.max_decision[0]];
                 next_goal.z = sensing_uav.z + sensing_uav.znew[decision.max_decision[0]];
-
+//cout<< "b" << endl;
                 decision.max_entropy = -10000.0;
                 next_goal_msg.pose.position.x = next_goal.x;
                 next_goal_msg.pose.position.y = next_goal.y;
@@ -683,7 +315,17 @@ int main(int argc, char **argv)
                 //------------------initialize------------------
                 sensing_conc = -1.0;
 
+/*
+                iteration += 1;
+                cout << "Iteration: " << iteration << endl;
 
+                auto process_done = high_resolution_clock::now();
+                duration<double> process_duration = process_done - process_start;
+                time_sum += process_duration.count();
+                double time_avg = time_sum/iteration;
+
+                cout << "Processing average time: " << time_avg << endl;
+*/
             } // finish sensing + pf update + decision making
 
         } // goal reached
@@ -691,6 +333,8 @@ int main(int argc, char **argv)
         //-----------------------always publish target pose------------------------
         next_goal_pub.publish(next_goal_msg);
         //--------------------------------------------------------------------------
+        //ROS_INFO("Sensor_data_obtaining_ready");
+        //cout<<lidar_map.updated << endl;
         if(lidar_map.updated)
         {
             current_map.clear();
@@ -701,30 +345,23 @@ int main(int argc, char **argv)
                     current_map.push_back(lidar_map.grid_map[i][j]);
                 }
             }
-
+            //cout << current_map[0] << endl;
             lidar_map.updated = false;
         }
-
+        //cout << current_map[0] << endl;
         map_2d_msg.data = current_map;
         map_2d_pub.publish(map_2d_msg);
 
-
-        double x_std = pf.vector_std(pf.X);
-        double y_std = pf.vector_std(pf.Y);
-
-        if(sqrt(pow(x_std,2)+pow(y_std,2))  < 3 || max_steps < iteration)
+        if(pf.vector_std(pf.Wpnorm) < 3)
         {
             double xmean, ymean, zmean;
             for(int i=0; i<pf.n_p; i++)
             {
                 xmean += pf.Wpnorm[i]*pf.X[i];
-                ymean += pf.Wpnorm[i]*pf.Y[i];
-                zmean += pf.Wpnorm[i]*pf.Z[i];
+                zmean += pf.Wpnorm[i]*pf.Y[i];
+                ymean += pf.Wpnorm[i]*pf.Z[i];
             }
-            cout << "X " << xmean << " Y " << ymean << " Z " << zmean << endl;
-            double dist_3d = sqrt(pow(source[0]-xmean,2)+pow(source[1]-ymean,2)+pow(source[3]-zmean,2));
-            cout << "DIST: " << dist_3d << endl;
-            if(dist_3d < 20)
+            if(sqrt(pow(source[0]-xmean,2)+pow(source[1]-ymean,2)+pow(source[3]-zmean,2)) < 6)
                 cout << "SUCCESS" << endl;
             else
                 cout << "FAILED" << endl;
@@ -732,12 +369,18 @@ int main(int argc, char **argv)
             ros::shutdown();
             //initialization
         }
-
         ros::spinOnce();
+        //cout << "uav_x_now: " << uav.x << endl;;
+        /*
+        for (size_t i=0; i< pf.X.size(); i++)
+        {
+            cout << pf.X[i] << ";  ";
+        }
+        cout << endl;
 
+        cout << env.source_x << endl;
+        */
         loop_rate.sleep();
     }
     return 0;
 }
-
-

@@ -16,6 +16,7 @@ using std::vector;
 class DecisionMaker
 {
 public:
+    //UavClass new_goal;
     EnvClass agent_env;
     LidarMap agent_map;
     int total_rh;

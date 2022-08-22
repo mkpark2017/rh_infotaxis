@@ -2,6 +2,7 @@
 
 DecisionMaker::DecisionMaker(EnvClass env, LidarMap lidarmap, int rh_length)
 {
+    //new_goal = uav;
     agent_env = env;
     agent_map = lidarmap;
     total_rh = rh_length;
@@ -31,6 +32,7 @@ bool DecisionMaker::check_building_block(UavClass uav, UavClass current)
 {
     int uav_grid_x = round(uav.x/agent_map.resolution)-1; //location 3 = grid 0
     int uav_grid_y = round(uav.y/agent_map.resolution)-1;
+    //int uav_grid_z = round(uav.z/agent_map.resolution);
     int current_grid_x = round(current.x/agent_map.resolution)-1;
     int current_grid_y = round(current.y/agent_map.resolution)-1;
     int current_grid_z = round(current.z/agent_map.resolution)-1;
@@ -58,10 +60,14 @@ bool DecisionMaker::check_building_block(UavClass uav, UavClass current)
                 if(agent_map.grid_map[l][k] == 100)
                 {
                     building_block = true;
+                    //cout << "x: " << l << " y: " << k << endl;
+
                 }
             }
         }
     }
+    //if (building_block)
+    //    agent_map.grid_map[300][300] = -1;
     return building_block;
 }
 
@@ -94,7 +100,7 @@ void DecisionMaker::RHI_BR(UavClass uav, ParticleFilter pf, int current_rh, vect
                 continue;
             else
             {
-                int8_t sensor_model = 2; //1: Gaussian 2: binary sensor model
+                int8_t sensor_model = 2; // binary sensor model
                 bool reampling_on = false;
                 double current_entropy = 0;
                 for(int j=0; j<temp_pf.n_p; j++)
@@ -112,6 +118,7 @@ void DecisionMaker::RHI_BR(UavClass uav, ParticleFilter pf, int current_rh, vect
                     temp_pf.weight_update(current, sensor_model, sen_val, reampling_on);
                     Wp_sum.push_back(temp_pf.Wp_sum);
                     Wp_sum_sum += temp_pf.Wp_sum;
+//cout << "Wp_sum_sum: " << Wp_sum_sum << endl;
                     
                     for(int j=0; j<temp_pf.n_p; j++)
                     {
@@ -124,13 +131,13 @@ void DecisionMaker::RHI_BR(UavClass uav, ParticleFilter pf, int current_rh, vect
                 double new_entropy = 0;
                 for(int sen_val=0; sen_val<=1; sen_val++)
                 {
-
+//cout<<Wp_sum_sum << endl;
                     Wp_sum[sen_val] = Wp_sum[sen_val]/Wp_sum_sum;
                     future_entropy[sen_val] = Wp_sum[sen_val] * future_entropy[sen_val];
                     new_entropy += future_entropy[sen_val];
                 }
                 double entropy = current_entropy - new_entropy;
-
+                //cout << "entropy: " << entropy << endl;
                 ind_1d_temp.push_back(i);
                 entropy_1d_temp.push_back(entropy);
                 RHI_BR(current, pf, current_rh+1, ind_1d_temp, entropy_1d_temp);
@@ -141,20 +148,31 @@ void DecisionMaker::RHI_BR(UavClass uav, ParticleFilter pf, int current_rh, vect
     {
         rh_decision.push_back(ind_1d);
         double entropy_sum = 0;
-
+        //cout << "ind: ["; 
         for(int i=0; i<entropy_1d.size(); i++)
         {
+            //cout << static_cast<int16_t>(ind_1d[i]) << " "; 
             entropy_sum += pow(0.9,i)*entropy_1d[i];
         }
-
+        //cout << entropy_sum << endl;
+        //cout << "]" << endl;
         rh_entropy.push_back(entropy_sum);
         if(max_entropy < entropy_sum)
         {
             max_decision = ind_1d;
             max_entropy = entropy_sum;
+            //cout << "max_entropy: " << max_entropy << endl;
         }
-
+        //cout << "num rh decision: " << rh_decision.size() << endl;
     }
+    /*
+    for(int i=0; i<new_goal.num_decision; i++)
+    {
+        cout << "uav_xnew " << i << ": " << new_goal.xnew[i] << endl;
+        cout << "uav_ynew " << i << ": " << new_goal.ynew[i] << endl;
+        cout << "uav_znew " << i << ": " << new_goal.znew[i] << endl << endl;
+    }
+    */
 
 }
 

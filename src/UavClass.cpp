@@ -1,4 +1,6 @@
 #include "rh_infotaxis/UavClass.h"
+//#include "rh_infotaxis/EnvClass.h"
+//#include <stdr_msgs/AddCO2Source.h>
 
 void UavClass::bi_thre_update()
 {
@@ -30,4 +32,13 @@ void UavClass::initialization(double sen_param[])
     ynew[4] = 0,           ynew[5] = 0,          ynew[6] = 0;
     znew[4] = -1.0*move_v, znew[5] = 1.0*move_v, znew[6] = 0;
 }
+/*
+void UavClass::state_update(double pose[], double conc)
+{
+    x = pose[0];
+    y = pose[1];
+    z = pose[2];
 
+    sensor_value = conc;
+}
+*/
